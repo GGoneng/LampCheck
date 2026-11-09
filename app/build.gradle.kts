@@ -31,9 +31,26 @@ android {
         )
     }
 
+    // release 서명 정보는 local.properties에서 읽음 (키와 비밀번호는 저장소에 올리지 않음)
+    signingConfigs {
+        create("release") {
+            val storePath: String? = localProperties.getProperty("RELEASE_STORE_FILE")
+            if (storePath != null) {
+                storeFile = file(storePath)
+                storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            // 서명 정보가 있을 때만 release 서명 적용
+            if (localProperties.getProperty("RELEASE_STORE_FILE") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

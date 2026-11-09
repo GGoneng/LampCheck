@@ -8,6 +8,7 @@
 // - 교체 권장·고장으로 바뀌는 순간 한 번만 알리는지 확인
 // - 상태가 좋아졌다가 다시 나빠지면 다시 알리는지 확인
 // - 교체 권장(밝기), 수명 만료, 고장 문장 확인
+// - 꺼져 있어도 최근 밝기가 10% 미만이면 켜지지 않는다는 문장을 쓰는지 확인
 // -----------------------------------------------------------------------------------
 
 package io.github.ggoneng.lampcheck.alert
@@ -134,6 +135,31 @@ class ReplacementAlertTest {
             listOf(
                 "왼쪽 하향등 예상 수명이 다 됐어요. 교체를 권해요.",
                 "오른쪽 브레이크등이 켜지지 않아요. 바로 점검해 주세요."
+            ),
+            fixture.spoken
+        )
+    }
+
+    @Test
+    fun veryDimLamp_isSpokenAsNotLighting_evenWhenOff() = runTest {
+        val fixture = AlertFixture(this)
+        fixture.alert.start()
+
+        // 앱을 다시 켰을 때 꺼져 있는 브레이크등의 최근 밝기가 0% (상태는 교체 권장)
+        fixture.conditions.value = listOf(condition(BRAKE_RIGHT, LampStatus.REPLACE_NOW, 0.0))
+        runCurrent()
+
+        // 경계: 10%는 밝기 문장
+        fixture.conditions.value = listOf(
+            condition(BRAKE_RIGHT, LampStatus.REPLACE_NOW, 0.0),
+            condition(LOW_LEFT, LampStatus.REPLACE_NOW, 10.0)
+        )
+        runCurrent()
+
+        assertEquals(
+            listOf(
+                "오른쪽 브레이크등이 켜지지 않아요. 바로 점검해 주세요.",
+                "왼쪽 하향등 밝기가 처음의 10%예요. 교체를 권해요."
             ),
             fixture.spoken
         )

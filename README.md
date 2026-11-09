@@ -68,7 +68,8 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
 - Pleos Connect Emulator(`Pleos Connect v2.1.0` 시스템 이미지, Android API 34)에서 실행합니다.
-- 테스트: `./gradlew testDebugUnitTest`, 에뮬레이터가 켜진 상태에서 `./gradlew connectedDebugAndroidTest`
+- 바로 설치할 수 있는 release APK: `apk/이민하_램프체크_release.apk`
+- 테스트: `./gradlew testDebugUnitTest`(단위·회귀 41개), 에뮬레이터가 켜진 상태에서 `./gradlew connectedDebugAndroidTest`(기기 8개). 2026-11-10 Pleos Connect v2.1 에뮬레이터에서 모두 통과했습니다.
 
 <br><br>
 ## 📝 한계와 향후 계획
