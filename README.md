@@ -1,0 +1,79 @@
+# 📌 램프체크 (LampCheck)
+
+> ### **램프 밝기로 수명을 추정하는 Pleos Connect 차량 앱**
+
+<img src="docs/screenshots/03_degraded.png" width="800" alt="램프 상태판 화면">
+
+<br><br>
+## 📖 개요
+
+램프체크는 타이어 공기압을 보듯 램프마다 밝기를 재서, 램프 수명이 얼마나 남았는지 운전석 화면에서 미리 알려 주는 앱입니다.
+브레이크등이나 미등처럼 차 뒤쪽 램프는 운전자가 볼 수 없어서, 고장이 나도 차에서 내려 확인하거나 단속, 정기검사에서야 알게 되는 경우가 많습니다.
+LED 램프는 갑자기 꺼지기보다 서서히 어두워지기 때문에(처음 밝기의 70%가 되는 시점을 수명 끝으로 봄), 밝기를 꾸준히 기록하면 고장 전에 교체 시점을 예측할 수 있습니다.
+앱은 Pleos Vehicle SDK로 램프별 점등 시간을 쌓고, 밝기 측정값에 감쇠 곡선을 맞춰 남은 수명과 교체 예상 날짜를 계산합니다.
+현대자동차그룹 차량용 앱 개발 공모전 출품작입니다.
+
+<br><br>
+## ✨ 주요 기능
+- **램프 상태판**: 차를 위에서 본 그림에 램프마다 밝기(처음 대비 %)와 상태(양호, 교체 준비, 교체 권장, 고장)를 표시합니다.
+- **점등 시간 기록**: 하향등, 상향등, 미등, 안개등, 방향지시등, 브레이크등, 후진등이 켜져 있던 시간을 차량 신호로 쌓습니다.
+- **수명 추정**: 밝기 측정값으로 감쇠 속도를 구해 남은 점등 시간과 교체 예상 날짜를 계산합니다. 측정값이 부족하면 광원별 정격 수명으로 추정합니다.
+- **교체 알림**: 교체 권장 단계가 되거나 켜져야 할 램프가 켜지지 않으면 음성으로 알립니다.
+- **정비소 길 안내**: 주변 정비소를 찾아 내비게이션 목적지로 보냅니다.
+- **시연 모드**: 차량에 밝기 센서가 아직 없어서, 시뮬레이터로 밝기를 낮추거나 고장을 내고 사용 시간을 더해 수명 추정을 보여 줍니다.
+
+<br><br>
+## 🛠️ 기술 스택
+
+| 구분 | 도구 / 프레임워크 |
+|---|---|
+| OS | Pleos Connect (Android Automotive OS 14) |
+| 언어 | Kotlin |
+| 프레임워크 | Jetpack Compose, Kotlin Coroutines |
+| SDK | Pleos Vehicle, TextToSpeech, FusedLocation, NaviHelper SDK, AAOS Car API |
+| 개발 환경 | Gradle 8.10.2, AGP 8.8.2, JDK 17, Pleos Connect Emulator v2.1 |
+| 외부 API | 카카오 로컬 키워드 검색 (정비소 검색) |
+
+<br><br>
+## 📂 프로젝트 구조
+
+```bash
+.
+├── app/src/main/java/io/github/ggoneng/lampcheck/
+│   ├── model/Lamp.kt                 # 램프 종류, 광원, 수명 상태 모델
+│   ├── vehicle/                      # Vehicle SDK와 Car API로 램프, 브레이크, 기어 신호 받기
+│   ├── usage/LampUsageTracker.kt     # 램프별 누적 점등 시간
+│   ├── lifespan/LifespanEstimator.kt # 감쇠 곡선 맞춤과 남은 수명 계산
+│   ├── sensor/                       # 밝기 센서 인터페이스와 시뮬레이터
+│   ├── alert/ReplacementAlert.kt     # 교체, 고장 음성 알림
+│   ├── data/LampDataStore.kt         # 점등 시간과 밝기 기록 저장
+│   ├── navi/                         # 현재 위치, 정비소 검색, 길 안내
+│   ├── voice/                        # TTS 음성 안내
+│   ├── ui/                           # 상태판, 정비소 화면
+│   └── [...]
+├── app/src/test/                     # 단위·회귀 테스트
+├── app/src/androidTest/              # 에뮬레이터 기기 테스트
+└── docs/                             # 화면 캡처, 에뮬레이터 신호 주입 방법
+```
+
+<br><br>
+## 💡 설치 방법
+
+```bash
+# local.properties에 SDK 경로와 (선택) 카카오 REST API 키를 넣습니다
+# sdk.dir=<Android SDK 경로>
+# KAKAO_REST_API_KEY=<키>
+./gradlew assembleDebug
+adb install app/build/outputs/apk/debug/app-debug.apk
+```
+
+- Pleos Connect Emulator(`Pleos Connect v2.1.0` 시스템 이미지, Android API 34)에서 실행합니다.
+- 테스트: `./gradlew testDebugUnitTest`, 에뮬레이터가 켜진 상태에서 `./gradlew connectedDebugAndroidTest`
+
+<br><br>
+## 📝 한계와 향후 계획
+- 램프 밝기 값은 지금 Pleos SDK에 없어서 시뮬레이터로 대신합니다. Pleos와 협의해 Vehicle SDK의 램프별 밝기 속성으로 연동할 계획입니다.
+- 앱이 화면 뒤로 가면 시스템이 앱을 멈춰 점등 시간이 쌓이지 않습니다. foreground service로 바꿀 계획입니다.
+- 주행 중 화면 표시를 위한 Distraction Optimization 선언과 심사가 필요합니다.
+- 안개등은 에뮬레이터에 신호가 없어 확인하지 못했고, 카카오 키 없이 정비소 검색과 길 안내는 확인하지 못했습니다.
+- SDK의 램프 점등 상태가 실제 점등을 감지한 값인지는 실차에서 확인해야 합니다.
