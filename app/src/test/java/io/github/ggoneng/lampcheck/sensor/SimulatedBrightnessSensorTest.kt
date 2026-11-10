@@ -9,6 +9,7 @@
 // - 기본 밝기가 정격 수명에서 수명 끝 밝기에 닿는지 확인 (LED, 할로겐)
 // - 시연 조작(열화, 고장, 초기화)이 측정값에 반영되는지 확인
 // - 시연 조작마다 상태가 저장되고, 저장한 상태로 다시 만들면 열화·고장이 그대로인지 확인
+// - 차종 프로필이 바뀌면 그 광원으로 다시 재는지, 램프 교체가 시연 조작과 마지막 측정값을 지우는지 확인
 // -----------------------------------------------------------------------------------
 
 package io.github.ggoneng.lampcheck.sensor
@@ -17,6 +18,8 @@ package io.github.ggoneng.lampcheck.sensor
 // Modules
 // ----------------------------------------------------------
 
+import io.github.ggoneng.lampcheck.lifespan.DEFAULT_PROFILE
+import io.github.ggoneng.lampcheck.lifespan.VehicleProfile
 import io.github.ggoneng.lampcheck.model.LampGroup
 import io.github.ggoneng.lampcheck.model.LampId
 import io.github.ggoneng.lampcheck.model.LampSide
@@ -54,13 +57,14 @@ private val LOW_BEAM_ON: VehicleSignals = VehicleSignals(connected = true, litGr
 // Internal Classes (do not call externally)
 // ----------------------------------------------------------
 
-// 센서와 가짜 신호, 누적 시간, 저장 기록을 묶은 테스트 환경
+// 센서와 가짜 신호, 누적 시간, 차종 프로필, 저장 기록을 묶은 테스트 환경
 private class SensorFixture(scope: TestScope, initialFaults: SimulatedFaults = SimulatedFaults()) {
     val signals: MutableStateFlow<VehicleSignals> = MutableStateFlow(VehicleSignals(connected = true))
     val hours: MutableStateFlow<Map<LampId, Double>> = MutableStateFlow(emptyMap())
+    val profile: MutableStateFlow<VehicleProfile> = MutableStateFlow(DEFAULT_PROFILE)
     val saved: MutableList<SimulatedFaults> = mutableListOf()
     val sensor: SimulatedBrightnessSensor =
-        SimulatedBrightnessSensor(signals, hours, initialFaults, { saved += it }, scope.backgroundScope)
+        SimulatedBrightnessSensor(signals, hours, profile, initialFaults, { saved += it }, scope.backgroundScope)
 
     // 램프 하나의 측정값
     fun reading(lamp: LampId): Double = sensor.readings.value.getValue(lamp)
@@ -208,6 +212,50 @@ class SimulatedBrightnessSensorTest {
         assertEquals(70.0, restarted.reading(LOW_LEFT), EPSILON)
         assertEquals(0.0, restarted.reading(BRAKE_RIGHT), EPSILON)
         assertEquals(100.0, restarted.reading(LOW_RIGHT), EPSILON)
+    }
+
+    @Test
+    fun profileChange_remeasuresWithItsLightSource() = runTest {
+        val fixture = SensorFixture(this)
+        fixture.sensor.start()
+        fixture.hours.value = mapOf(LOW_LEFT to LightSource.HALOGEN.ratedLifeHours)
+        fixture.signals.value = LOW_BEAM_ON
+        runCurrent()
+
+        // 기본 프로필(LED)에서는 500시간 써도 거의 그대로
+        assertTrue(fixture.reading(LOW_LEFT) > 95.0)
+
+        // 하향등이 할로겐인 차종으로 바뀌면 할로겐 정격 수명 500시간에서 수명 끝 밝기(80%)
+        fixture.profile.value = VehicleProfile("할로겐 하향등 차종", listOf("TEST"), mapOf(LampGroup.LOW_BEAM to LightSource.HALOGEN))
+        runCurrent()
+        assertEquals(LightSource.HALOGEN.endOfLifePercent, fixture.reading(LOW_LEFT), EPSILON)
+    }
+
+    @Test
+    fun replace_clearsFaultsAndLastReading() = runTest {
+        val fixture = SensorFixture(this)
+        fixture.sensor.start()
+        fixture.signals.value = LOW_BEAM_ON
+        runCurrent()
+
+        // 왼쪽 하향등을 고장 낸 뒤 끔 (마지막 측정값 0% 유지)
+        fixture.sensor.degrade(LOW_LEFT, 10.0)
+        fixture.sensor.fail(LOW_LEFT)
+        runCurrent()
+        fixture.signals.value = VehicleSignals(connected = true)
+        runCurrent()
+        assertEquals(0.0, fixture.reading(LOW_LEFT), EPSILON)
+
+        // 교체하면 마지막 측정값과 시연 조작이 지워지고 저장됨
+        fixture.sensor.replace(LOW_LEFT)
+        runCurrent()
+        assertTrue(LOW_LEFT !in fixture.sensor.readings.value)
+        assertEquals(SimulatedFaults(), fixture.saved.last())
+
+        // 다시 켜면 새 램프 밝기로 잼
+        fixture.signals.value = LOW_BEAM_ON
+        runCurrent()
+        assertEquals(100.0, fixture.reading(LOW_LEFT), EPSILON)
     }
 }
 

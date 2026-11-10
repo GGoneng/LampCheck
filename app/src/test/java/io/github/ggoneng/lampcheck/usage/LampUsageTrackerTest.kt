@@ -8,6 +8,7 @@
 // - 하향등, 브레이크등, 후진등, 방향지시등이 켜진 동안만 해당 램프에 시간이 쌓이는지 확인
 // - 주기 저장과 종료 저장, 처음 기록 시각 저장, 저장된 기록에서 이어 세기 확인
 // - 시연용 사용 시간 더하기와 하루 평균 사용 시간 계산(최대 24시간, 짧은 기록은 0) 확인
+// - 램프 교체가 그 램프의 누적 시간만 지우고 교체 시각부터 다시 세는지 확인
 // -----------------------------------------------------------------------------------
 
 package io.github.ggoneng.lampcheck.usage
@@ -215,6 +216,37 @@ class LampUsageTrackerTest {
         assertEquals(200.0, fixture.hours(lamp), EPSILON)
         assertEquals(200.0, fixture.saved.last().usedHours[lamp]!!, EPSILON)
         assertOnlyLampsUsed(fixture, setOf(lamp))
+    }
+
+    @Test
+    fun replaceLamp_clearsOnlyThatLamp_andCountsFromReplacedTime() = runTest {
+        val fixture = TrackerFixture(this)
+        val left = LampId(LampGroup.LOW_BEAM, LampSide.LEFT)
+        val right = LampId(LampGroup.LOW_BEAM, LampSide.RIGHT)
+        fixture.tracker.start()
+        runCurrent()
+
+        // 하향등 1시간 켬
+        fixture.signals.value = VehicleSignals(connected = true, litGroups = setOf(LampGroup.LOW_BEAM))
+        runCurrent()
+        advanceTimeBy(HOUR)
+        runCurrent()
+
+        // 켜진 채로 왼쪽만 교체: 왼쪽 0시간, 교체 시각 저장, 오른쪽은 그대로
+        fixture.tracker.replaceLamp(left)
+        assertEquals(0.0, fixture.hours(left), EPSILON)
+        assertEquals(1.0, fixture.hours(right), EPSILON)
+        assertEquals(HOUR, fixture.saved.last().replacedAtMillis[left])
+
+        // 30분 더 켜면 새 램프는 처음부터 다시 셈
+        advanceTimeBy(HOUR / 2)
+        runCurrent()
+        assertEquals(0.5, fixture.hours(left), EPSILON)
+        assertEquals(1.5, fixture.hours(right), EPSILON)
+
+        // 기록 시작 시각: 왼쪽은 교체 시각, 오른쪽은 처음 기록 시각 (하루 평균 계산에 씀)
+        assertEquals(HOUR, fixture.tracker.usage.value.startedAtMillis(left))
+        assertEquals(0L, fixture.tracker.usage.value.startedAtMillis(right))
     }
 
     @Test

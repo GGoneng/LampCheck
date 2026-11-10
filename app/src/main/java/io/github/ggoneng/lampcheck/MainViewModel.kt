@@ -5,8 +5,9 @@
 // 작성일       : 2026-11-09
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
-// - 차량 신호, 램프별 수명 추정 결과, 시연 모드, 화면 상태를 MainUiState 하나로 묶음
+// - 차량 신호, 램프별 수명 추정 결과, 차종 프로필 이름, 시연 모드, 화면 상태를 MainUiState 하나로 묶음
 // - 시연 모드: 램프 선택, 밝기 낮추기, 고장 내기, 사용 시간 빨리 감기, 초기화
+// - 램프 교체 기록
 // - 정비소 화면 검색과 길 안내
 // - ViewModel이 사라질 때 구현체 해제
 // -----------------------------------------------------------------------------------
@@ -20,6 +21,7 @@ package io.github.ggoneng.lampcheck
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.ggoneng.lampcheck.lifespan.DEFAULT_PROFILE
 import io.github.ggoneng.lampcheck.model.LampCondition
 import io.github.ggoneng.lampcheck.model.LampGroup
 import io.github.ggoneng.lampcheck.model.LampId
@@ -79,9 +81,11 @@ data class DemoState(
 )
 
 // 화면 전체 상태
+// profileName: VIN으로 고른 차종 프로필 이름
 data class MainUiState(
     val signals: VehicleSignals = VehicleSignals(),
     val conditions: List<LampCondition> = emptyList(),
+    val profileName: String = DEFAULT_PROFILE.name,
     val screen: Screen = Screen.HOME,
     val shop: ShopState = ShopState(),
     val demo: DemoState = DemoState(),
@@ -103,11 +107,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<MainUiState> = combine(
         container.vehicle.signals,
         container.conditions,
+        container.profile,
         screenState
-    ) { signals, conditions, screen ->
+    ) { signals, conditions, profile, screen ->
         MainUiState(
             signals = signals,
             conditions = conditions,
+            profileName = profile.name,
             screen = screen.screen,
             shop = screen.shop,
             demo = screen.demo,
@@ -150,6 +156,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // 시연: 고른 램프의 열화와 고장을 없앰
     fun resetSelected() {
         container.sensor.reset(screenState.value.demo.selected)
+    }
+
+    // 램프 교체: 그 램프를 새 램프 기준으로 다시 기록
+    fun replaceLamp(lamp: LampId) {
+        container.replaceLamp(lamp)
     }
 
     // 정비소 화면 열기와 주변 검색

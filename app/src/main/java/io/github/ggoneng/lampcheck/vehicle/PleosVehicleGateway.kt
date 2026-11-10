@@ -7,7 +7,7 @@
 // >> 주요 기능
 // - 하향등, 상향등, 미등, 전면·후면 안개등의 capability 확인, 점등 상태 구독, 스위치 위치 조회와 변경
 // - 방향지시등 상태와 브레이크 페달 구독 (Vehicle SDK)
-// - 기어 구독 (AAOS CarPropertyManager), 주행 제한 구독 (CarUxRestrictionsManager)
+// - 기어·차속 구독 (AAOS CarPropertyManager), 주행 제한 구독 (CarUxRestrictionsManager)
 // - 차대번호(VIN) 조회
 // -----------------------------------------------------------------------------------
 
@@ -44,6 +44,7 @@ import android.util.Log
 import io.github.ggoneng.lampcheck.model.LampGroup
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
+import kotlin.math.abs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,14 +61,8 @@ private const val TAG: String = "LampCheck"
 // SDK 응답을 기다리는 최대 시간 (서비스가 연결되지 않으면 SDK가 요청을 쌓아 두기만 하므로 끝을 정함)
 private const val CALL_TIMEOUT_MILLIS: Long = 5_000L
 
-// Light API로 점등 상태와 스위치를 다루는 다섯 그룹
-private val LIGHT_GROUPS: List<LampGroup> = listOf(
-    LampGroup.LOW_BEAM,
-    LampGroup.HIGH_BEAM,
-    LampGroup.TAIL,
-    LampGroup.FRONT_FOG,
-    LampGroup.REAR_FOG
-)
+// 이 차속(m/s) 이상이면 움직이는 중으로 봄 (설계 기본값, 약 0.4km/h)
+private const val MOVING_SPEED_MPS: Float = 0.1f
 
 // 읽을 수 있는 접근 수준과 쓸 수 있는 접근 수준
 private val READABLE: Set<AccessType> = setOf(AccessType.READ, AccessType.READ_WRITE)
@@ -165,7 +160,7 @@ class PleosVehicleGateway(context: Context) : VehicleGateway {
         }
     }
 
-    // 기어 리스너 (AAOS)
+    // 기어·차속 리스너 (AAOS)
     private val carPropertyCallback: CarPropertyManager.CarPropertyEventCallback =
         object : CarPropertyManager.CarPropertyEventCallback {
             override fun onChangeEvent(value: CarPropertyValue<*>) {
@@ -174,6 +169,12 @@ class PleosVehicleGateway(context: Context) : VehicleGateway {
                         // VehicleGear 값을 앱 기어로 변환
                         val gear: Gear = toGear(value.value as? Int ?: VehicleGear.GEAR_UNKNOWN)
                         _signals.update { it.copy(gear = gear) }
+                    }
+
+                    VehiclePropertyIds.PERF_VEHICLE_SPEED -> {
+                        // 차속(m/s, 후진은 음수)이 기준 이상이면 움직이는 중
+                        val speed: Float = value.value as? Float ?: 0f
+                        _signals.update { it.copy(moving = abs(speed) >= MOVING_SPEED_MPS) }
                     }
                 }
             }
@@ -203,7 +204,7 @@ class PleosVehicleGateway(context: Context) : VehicleGateway {
         startTurnSignal()
         startBrake()
 
-        // AAOS Car API 연결과 기어, 주행 제한 구독
+        // AAOS Car API 연결과 기어, 차속, 주행 제한 구독
         startCar()
     }
 
@@ -325,7 +326,7 @@ class PleosVehicleGateway(context: Context) : VehicleGateway {
         runSafely("브레이크 페달 조회") { brake.getCurrentBrakePedalStatus(onComplete, onFailed) }
     }
 
-    // AAOS Car API 연결과 기어, 주행 제한 구독
+    // AAOS Car API 연결과 기어, 차속, 주행 제한 구독
     private fun startCar() {
         // Car 서비스에 연결 (서비스가 없으면 null)
         val connected: Car = try {
@@ -344,6 +345,15 @@ class PleosVehicleGateway(context: Context) : VehicleGateway {
                 carPropertyCallback,
                 VehiclePropertyIds.GEAR_SELECTION,
                 CarPropertyManager.SENSOR_RATE_ONCHANGE
+            )
+        }
+
+        // 차속은 연속 값이라 1초 간격으로 받음 (CAR_SPEED 권한 필요, 없으면 움직임을 알 수 없어 멈춤으로 남음)
+        runSafely("차속 구독") {
+            propertyManager?.registerCallback(
+                carPropertyCallback,
+                VehiclePropertyIds.PERF_VEHICLE_SPEED,
+                CarPropertyManager.SENSOR_RATE_NORMAL
             )
         }
 

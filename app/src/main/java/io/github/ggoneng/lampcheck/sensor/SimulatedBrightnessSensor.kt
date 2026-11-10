@@ -6,9 +6,10 @@
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
 // - 지금 켜져 있는 램프만 측정값을 냄 (꺼진 램프는 마지막 측정값 유지)
-// - 기본 밝기 = 100 × e^(−k₀·누적 시간), 정격 수명에서 수명 끝 밝기에 닿도록 k₀를 정함
+// - 기본 밝기 = 100 × e^(−k₀·누적 시간), 차종 프로필의 광원 정격 수명에서 수명 끝 밝기에 닿도록 k₀를 정함
 // - 시연 조작: 램프별 추가 열화(밝기 %p 낮추기), 고장(0%), 초기화
 // - 시연 조작 상태를 주입받은 저장 함수로 저장하고, 시작할 때 받은 상태로 복원
+// - 램프 교체: 그 램프의 시연 조작과 마지막 측정값을 지움
 // -----------------------------------------------------------------------------------
 
 package io.github.ggoneng.lampcheck.sensor
@@ -17,7 +18,7 @@ package io.github.ggoneng.lampcheck.sensor
 // Modules
 // ----------------------------------------------------------
 
-import io.github.ggoneng.lampcheck.lifespan.lightSourceOf
+import io.github.ggoneng.lampcheck.lifespan.VehicleProfile
 import io.github.ggoneng.lampcheck.model.LampId
 import io.github.ggoneng.lampcheck.model.LightSource
 import io.github.ggoneng.lampcheck.usage.litLamps
@@ -58,11 +59,12 @@ data class SimulatedFaults(
 )
 
 // 시연용 밝기 센서
-// signals: 차량 신호 (켜진 램프 판단), usedHours: 램프별 누적 점등 시간
+// signals: 차량 신호 (켜진 램프 판단), usedHours: 램프별 누적 점등 시간, profile: 램프 광원을 정하는 차종 프로필
 // initialFaults: 저장해 둔 시연 조작 상태, saveFaults: 시연 조작 상태 저장 함수 (테스트에서 가짜 저장을 넣을 수 있게 주입받음)
 class SimulatedBrightnessSensor(
     private val signals: Flow<VehicleSignals>,
     private val usedHours: Flow<Map<LampId, Double>>,
+    private val profile: Flow<VehicleProfile>,
     initialFaults: SimulatedFaults,
     private val saveFaults: (SimulatedFaults) -> Unit,
     private val scope: CoroutineScope
@@ -80,10 +82,11 @@ class SimulatedBrightnessSensor(
     override fun start() {
         if (job != null) return
 
-        // 신호, 누적 시간, 시연 조작 중 하나가 바뀌면 켜진 램프를 다시 잼
+        // 신호, 누적 시간, 차종 프로필, 시연 조작 중 하나가 바뀌면 켜진 램프를 다시 잼
         job = scope.launch {
-            combine(signals, usedHours, faults) { value, hours, demo -> measure(value, hours, demo) }
-                .collect { measured -> _readings.update { it + measured } }
+            combine(signals, usedHours, profile, faults) { value, hours, vehicleProfile, demo ->
+                measure(value, hours, vehicleProfile, demo)
+            }.collect { measured -> _readings.update { it + measured } }
         }
     }
 
@@ -110,6 +113,12 @@ class SimulatedBrightnessSensor(
         changeFaults { SimulatedFaults(extraDrop = it.extraDrop - lamp, failed = it.failed - lamp) }
     }
 
+    // 램프 교체: 옛 램프의 마지막 측정값을 지우고 열화와 고장을 없앰 (켜져 있으면 새 램프로 다시 잼)
+    fun replace(lamp: LampId) {
+        _readings.update { it - lamp }
+        reset(lamp)
+    }
+
     // 시연 조작 상태를 바꾸고 바로 저장
     private fun changeFaults(transform: (SimulatedFaults) -> SimulatedFaults) {
         faults.update(transform)
@@ -117,12 +126,17 @@ class SimulatedBrightnessSensor(
     }
 
     // 켜진 램프마다 밝기 계산
-    private fun measure(value: VehicleSignals, hours: Map<LampId, Double>, demo: SimulatedFaults): Map<LampId, Double> =
+    private fun measure(
+        value: VehicleSignals,
+        hours: Map<LampId, Double>,
+        vehicleProfile: VehicleProfile,
+        demo: SimulatedFaults
+    ): Map<LampId, Double> =
         litLamps(value).associateWith { lamp ->
             if (lamp in demo.failed) {
                 0.0
             } else {
-                val base: Double = baseBrightness(lightSourceOf(lamp), hours[lamp] ?: 0.0)
+                val base: Double = baseBrightness(vehicleProfile.lightSourceOf(lamp), hours[lamp] ?: 0.0)
                 (base - (demo.extraDrop[lamp] ?: 0.0)).coerceIn(0.0, 100.0)
             }
         }

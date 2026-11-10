@@ -5,8 +5,8 @@
 // 작성일       : 2026-11-10
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
-// - 램프별 누적 점등 시간과 처음 기록 시각 저장과 불러오기
-// - 램프별 밝기 측정값 목록(최근 50개) 저장과 불러오기, StateFlow로 내보내기
+// - 램프별 누적 점등 시간, 처음 기록 시각, 교체 시각 저장과 불러오기
+// - 램프별 밝기 측정값 목록(최근 50개) 저장과 불러오기, StateFlow로 내보내기, 교체한 램프의 측정값 지우기
 // - 누적 시간이 0.5시간 이상 늘었거나 밝기가 1%p 이상 바뀐 측정값만 기록
 // - 시연용 밝기 시뮬레이터의 램프별 추가 열화·고장 상태 저장과 불러오기
 // -----------------------------------------------------------------------------------
@@ -60,6 +60,8 @@ private const val FIELD_MEASURED_AT: String = "measuredAtMillis"
 private const val FIELD_EXTRA_DROP: String = "extraDrop"
 private const val FIELD_PERCENT_POINTS: String = "percentPoints"
 private const val FIELD_FAILED: String = "failed"
+private const val FIELD_REPLACED: String = "replaced"
+private const val FIELD_REPLACED_AT: String = "replacedAtMillis"
 
 // ----------------------------------------------------------
 // External Variables (can be called from outside)
@@ -105,6 +107,14 @@ class LampDataStore(context: Context) {
         prefs.edit().putString(KEY_SAMPLES, encodeSamples(next)).apply()
     }
 
+    // 램프 하나의 측정값을 모두 지우고 저장 (램프 교체)
+    fun clearSamples(lamp: LampId) {
+        if (lamp !in _samples.value) return
+        val next: Map<LampId, List<BrightnessSample>> = _samples.value - lamp
+        _samples.value = next
+        prefs.edit().putString(KEY_SAMPLES, encodeSamples(next)).apply()
+    }
+
     // 저장된 시연 조작 상태 불러오기 (없으면 조작 없음)
     fun loadFaults(): SimulatedFaults = decodeFaults(prefs.getString(KEY_FAULTS, null))
 
@@ -144,9 +154,17 @@ private fun encodeUsage(usage: LampUsage): String {
         item.put(FIELD_HOURS, hours)
         lamps.put(item)
     }
+    val replaced = JSONArray()
+    for ((lamp, replacedAt) in usage.replacedAtMillis) {
+        val item = JSONObject()
+        putLamp(item, lamp)
+        item.put(FIELD_REPLACED_AT, replacedAt)
+        replaced.put(item)
+    }
     val root = JSONObject()
     root.put(FIELD_FIRST_RECORDED_AT, usage.firstRecordedAtMillis ?: JSONObject.NULL)
     root.put(FIELD_LAMPS, lamps)
+    root.put(FIELD_REPLACED, replaced)
     return root.toString()
 }
 
@@ -161,7 +179,14 @@ private fun decodeUsage(json: String?): LampUsage {
         readLamp(item) to item.getDouble(FIELD_HOURS)
     }
     val firstRecordedAt: Long? = if (root.isNull(FIELD_FIRST_RECORDED_AT)) null else root.getLong(FIELD_FIRST_RECORDED_AT)
-    return LampUsage(usedHours = usedHours, firstRecordedAtMillis = firstRecordedAt)
+
+    // 교체 시각 (교체 기능 전에 저장한 기록에는 없으므로 빈 배열로 봄)
+    val replaced: JSONArray = root.optJSONArray(FIELD_REPLACED) ?: JSONArray()
+    val replacedAt: Map<LampId, Long> = (0 until replaced.length()).associate { index ->
+        val item: JSONObject = replaced.getJSONObject(index)
+        readLamp(item) to item.getLong(FIELD_REPLACED_AT)
+    }
+    return LampUsage(usedHours = usedHours, firstRecordedAtMillis = firstRecordedAt, replacedAtMillis = replacedAt)
 }
 
 // 램프별 측정값을 JSON 배열 문자열로 변환

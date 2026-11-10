@@ -16,6 +16,7 @@ package io.github.ggoneng.lampcheck.ui
 // Modules
 // ----------------------------------------------------------
 
+import io.github.ggoneng.lampcheck.lifespan.DEFAULT_PROFILE
 import io.github.ggoneng.lampcheck.lifespan.estimateLamp
 import io.github.ggoneng.lampcheck.model.LampCondition
 import io.github.ggoneng.lampcheck.model.LampGroup
@@ -56,7 +57,7 @@ class RemainingTextTest {
         // 처음 기록 2분 뒤, 누적 2분 → 하루 평균 0 → 교체 날짜 없음
         val used: Double = 2.0 / 60.0
         val daily: Double = averageDailyHours(used, NOW_MILLIS - 120_000L, NOW_MILLIS)
-        val condition: LampCondition = estimateLamp(LOW_LEFT, used, emptyList(), daily, false, NOW_MILLIS)
+        val condition: LampCondition = estimateLamp(LOW_LEFT, used, emptyList(), daily, false, NOW_MILLIS, DEFAULT_PROFILE)
         assertEquals("10,000시간", remainingText(condition, NOW_MILLIS))
     }
 
@@ -73,7 +74,7 @@ class RemainingTextTest {
     fun fastForwardedLamp_isShownInMonthsWithDailyCap() {
         // 첫날 100시간 빨리 감기 → 하루 24시간으로 제한 → 9,900 / 24 = 412.5일 → 약 14개월
         val daily: Double = averageDailyHours(100.0, NOW_MILLIS - 60_000L, NOW_MILLIS)
-        val condition: LampCondition = estimateLamp(LOW_LEFT, 100.0, emptyList(), daily, false, NOW_MILLIS)
+        val condition: LampCondition = estimateLamp(LOW_LEFT, 100.0, emptyList(), daily, false, NOW_MILLIS, DEFAULT_PROFILE)
         assertEquals("약 14개월 (9,900시간)", remainingText(condition, NOW_MILLIS))
     }
 

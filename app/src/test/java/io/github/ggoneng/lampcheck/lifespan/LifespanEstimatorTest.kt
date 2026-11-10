@@ -8,6 +8,7 @@
 // - 감쇠율 맞춤이 참값을 되찾는지, 측정값이 부족하면 맞추지 않는지 확인
 // - 정격 수명 대체 계산, 감쇠 모델 남은 수명 계산 확인
 // - 상태 판정 임계값(고장, 교체 권장, 교체 준비, 양호, 데이터 없음)과 교체 예상 시각 환산 확인
+// - 기본 프로필의 광원 표와, 차종 프로필의 광원으로 추정하는지 확인
 // -----------------------------------------------------------------------------------
 
 package io.github.ggoneng.lampcheck.lifespan
@@ -59,12 +60,21 @@ class LifespanEstimatorTest {
 
     @Test
     fun lightSource_reverseAndRearTurnAreHalogen_othersLed() {
-        // 후진등과 뒤 방향지시등만 할로겐
+        // 기본 프로필: 후진등과 뒤 방향지시등만 할로겐
         for (lamp in ALL_LAMPS) {
             val expected: LightSource =
                 if (lamp.group == LampGroup.REVERSE || lamp.group == LampGroup.REAR_TURN) LightSource.HALOGEN else LightSource.LED
-            assertEquals(lamp.label, expected, lightSourceOf(lamp))
+            assertEquals(lamp.label, expected, DEFAULT_PROFILE.lightSourceOf(lamp))
         }
+    }
+
+    @Test
+    fun estimate_usesLightSourceFromProfile() {
+        // 하향등이 할로겐인 차종: 정격 500시간 − 누적 200시간 = 300시간, 광원도 할로겐
+        val halogenLowBeam = VehicleProfile("할로겐 하향등 차종", listOf("TEST"), mapOf(LampGroup.LOW_BEAM to LightSource.HALOGEN))
+        val condition: LampCondition = estimateLamp(LED_LAMP, 200.0, emptyList(), 0.0, false, NOW_MILLIS, halogenLowBeam)
+        assertEquals(LightSource.HALOGEN, condition.source)
+        assertEquals(300.0, condition.remainingHours!!, EPSILON)
     }
 
     @Test
@@ -184,7 +194,8 @@ class LifespanEstimatorTest {
             samples = emptyList(),
             dailyHours = 0.5,
             shouldBeLit = false,
-            nowMillis = NOW_MILLIS
+            nowMillis = NOW_MILLIS,
+            profile = DEFAULT_PROFILE
         )
         assertEquals(300.0, reverse.remainingHours!!, EPSILON)
         assertEquals(NOW_MILLIS + 600L * DAY_MILLIS, reverse.estimatedReplaceAtMillis)
@@ -210,13 +221,13 @@ private fun sample(usedHours: Double, brightness: Double): BrightnessSample =
 private fun decaySamples(k: Double, hours: List<Double>): List<BrightnessSample> =
     hours.map { t -> sample(t, 100.0 * exp(-k * t)) }
 
-// LED 하향등 수명 추정 (하루 평균 기본 0)
+// 기본 프로필의 LED 하향등 수명 추정 (하루 평균 기본 0)
 private fun estimate(
     usedHours: Double,
     samples: List<BrightnessSample>,
     dailyHours: Double = 0.0,
     shouldBeLit: Boolean = false
-): LampCondition = estimateLamp(LED_LAMP, usedHours, samples, dailyHours, shouldBeLit, NOW_MILLIS)
+): LampCondition = estimateLamp(LED_LAMP, usedHours, samples, dailyHours, shouldBeLit, NOW_MILLIS, DEFAULT_PROFILE)
 
 // ----------------------------------------------------------
 // External Functions (can be called from outside)

@@ -6,7 +6,7 @@
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
 // - 배경, 패널, 글자, 강조 색 정의
-// - 수명 상태 색(양호 초록, 교체 준비 노랑, 교체 권장 주황, 고장 빨강, 데이터 없음 회색)과 차량 그림 색 정의
+// - 수명 상태 색(양호 초록, 교체 준비 노랑, 교체 권장·고장 빨강, 데이터 없음 회색)과 차량 그림 색 정의
 // -----------------------------------------------------------------------------------
 
 package io.github.ggoneng.lampcheck.ui.theme
@@ -41,7 +41,6 @@ val AccentColor: Color = Color(0xFF4FA3FF)
 // 수명 상태
 val StatusGoodColor: Color = Color(0xFF3DD68C)
 val StatusSoonColor: Color = Color(0xFFFFC53D)
-val StatusNowColor: Color = Color(0xFFFF8A3D)
 val StatusFailedColor: Color = Color(0xFFFF5A5A)
 val StatusNoDataColor: Color = Color(0xFF7D838C)
 
@@ -74,7 +73,7 @@ val GlowRedColor: Color = Color(0xFFFF3B3B)
 fun statusColor(status: LampStatus): Color = when (status) {
     LampStatus.GOOD -> StatusGoodColor
     LampStatus.REPLACE_SOON -> StatusSoonColor
-    LampStatus.REPLACE_NOW -> StatusNowColor
+    LampStatus.REPLACE_NOW -> StatusFailedColor
     LampStatus.FAILED -> StatusFailedColor
     LampStatus.NO_DATA -> StatusNoDataColor
 }

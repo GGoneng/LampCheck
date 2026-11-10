@@ -22,9 +22,10 @@ package io.github.ggoneng.lampcheck.permission
 // External Variables (can be called from outside)
 // ----------------------------------------------------------
 
-// 시작할 때 요청할 런타임 권한 (Pleos 위치: 정비소 검색 기준점)
+// 시작할 때 요청할 런타임 권한 (Pleos 위치: 정비소 검색 기준점, AAOS 차속: 정차할 때까지 교체 권장 알림 미루기)
 val RUNTIME_PERMISSIONS: Array<String> = arrayOf(
-    "pleos.car.permission.FUSED_LOCATION"
+    "pleos.car.permission.FUSED_LOCATION",
+    "android.car.permission.CAR_SPEED"
 )
 
 // ----------------------------------------------------------

@@ -6,7 +6,7 @@
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
 // - 카카오 API 키가 없으면 local.properties 설정 안내
-// - 정비소 이름, 주소, 거리 목록. 누르면 길 안내
+// - 정비소 이름, 주소, 거리 목록. 누르면 길 안내 (주행 제한 중에는 목록 대신 안내 문장)
 // - 검색·길 안내 결과 문장 표시
 // -----------------------------------------------------------------------------------
 
@@ -95,11 +95,12 @@ private fun ShopRow(shop: RepairShop, onClick: () -> Unit) {
 // External Functions (can be called from outside)
 // ----------------------------------------------------------
 
-// 정비소 화면
+// 정비소 화면 (drivingRestricted: 주행 중이라 화면 조작이 제한된 상태인지)
 @Composable
 fun RepairShopScreen(
     state: ShopState,
     canSearchShops: Boolean,
+    drivingRestricted: Boolean,
     onRoute: (RepairShop) -> Unit,
     onBack: () -> Unit
 ) {
@@ -119,8 +120,13 @@ fun RepairShopScreen(
                 Text(text = message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
             }
 
-            // 키 없음 안내, 검색 중 표시, 정비소 목록
+            // 주행 제한 안내, 키 없음 안내, 검색 중 표시, 정비소 목록
             when {
+                drivingRestricted -> Text(
+                    text = "주행 중에는 정비소를 고를 수 없어요. 안전한 곳에 차를 세운 뒤 이용해 주세요.",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
                 !canSearchShops -> Text(
                     text = "local.properties에 KAKAO_REST_API_KEY를 넣어 주세요",
                     style = MaterialTheme.typography.bodyLarge

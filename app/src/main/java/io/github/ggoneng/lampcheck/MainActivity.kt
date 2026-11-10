@@ -55,12 +55,14 @@ class MainActivity : ComponentActivity() {
                         onDegrade = viewModel::degradeSelected,
                         onFail = viewModel::failSelected,
                         onFastForward = viewModel::fastForwardSelected,
-                        onReset = viewModel::resetSelected
+                        onReset = viewModel::resetSelected,
+                        onReplaceLamp = viewModel::replaceLamp
                     )
 
                     Screen.SHOPS -> RepairShopScreen(
                         state = state.shop,
                         canSearchShops = state.canSearchShops,
+                        drivingRestricted = state.signals.drivingRestricted,
                         onRoute = viewModel::routeTo,
                         onBack = viewModel::closeShops
                     )

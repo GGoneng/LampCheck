@@ -5,8 +5,9 @@
 // 작성일       : 2026-11-09
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
-// - 차량 연결 안 됨 알림 줄, 교체 권장·고장 배너와 정비소 찾기 버튼
-// - 램프별 이름, 밝기, 남은 수명, 누적 점등 시간, 상태 목록
+// - 차량 연결 안 됨 알림 줄, 교체 권장·고장 배너와 정비소 찾기 버튼 (주행 제한 중에는 버튼 숨김)
+// - VIN으로 고른 차종 이름과 램프 교체 안내, 램프별 이름, 밝기, 남은 수명, 누적 점등 시간, 상태 목록
+// - 목록에서 램프를 누르면 교체 확인 창 (시연 모드에서는 시연할 램프 선택, 주행 제한 중에는 누를 수 없음)
 // - 시연 모드 패널: 램프 선택, 밝기 10% 낮추기, 고장 내기, 100시간 사용, 초기화 (주행 제한 중에는 숨김)
 // -----------------------------------------------------------------------------------
 
@@ -35,12 +36,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -108,8 +115,9 @@ private fun NoticeBar(text: String, color: Color) {
 }
 
 // 교체 권장·고장 배너 (예: "왼쪽 하향등 교체 권장", "오른쪽 브레이크등 고장 외 1개")
+// showShopButton: 정비소 찾기 버튼을 보일지 (주행 제한 중에는 숨김)
 @Composable
-private fun ProblemBanner(problems: List<LampCondition>, onOpenShops: () -> Unit) {
+private fun ProblemBanner(problems: List<LampCondition>, showShopButton: Boolean, onOpenShops: () -> Unit) {
     // 문제가 여러 개면 첫 램프의 상태와 나머지 개수
     val first = problems.first()
     val summary = "${first.lamp.label} ${first.status.label}"
@@ -128,10 +136,28 @@ private fun ProblemBanner(problems: List<LampCondition>, onOpenShops: () -> Unit
             color = StatusFailedColor,
             modifier = Modifier.weight(1f)
         )
-        Button(onClick = onOpenShops, modifier = Modifier.height(64.dp)) {
-            Text(text = "정비소 찾기")
+        if (showShopButton) {
+            Button(onClick = onOpenShops, modifier = Modifier.height(64.dp)) {
+                Text(text = "정비소 찾기")
+            }
         }
     }
+}
+
+// 램프 교체 확인 창
+@Composable
+private fun ReplaceDialog(lamp: LampId, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = lamp.label) },
+        text = { Text(text = "새 램프로 교체했나요? 누적 점등 시간과 밝기 기록을 지우고 새 램프 기준으로 다시 기록해요.") },
+        confirmButton = {
+            Button(onClick = onConfirm, modifier = Modifier.height(64.dp)) { Text(text = "교체 완료") }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss, modifier = Modifier.height(64.dp)) { Text(text = "취소") }
+        }
+    )
 }
 
 // 목록 머리 줄
@@ -230,12 +256,23 @@ fun HomeScreen(
     onDegrade: () -> Unit,
     onFail: () -> Unit,
     onFastForward: () -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onReplaceLamp: (LampId) -> Unit
 ) {
     val nowMillis: Long = System.currentTimeMillis()
     val problems = PROBLEM_STATUSES.flatMap { status -> state.conditions.filter { it.status == status } }
     val demo: DemoState = state.demo
-    val showDemo: Boolean = demo.enabled && !state.signals.drivingRestricted
+    val restricted: Boolean = state.signals.drivingRestricted
+    val showDemo: Boolean = demo.enabled && !restricted
+
+    // 교체 확인 창을 띄운 램프 (없으면 null)
+    var replaceTarget: LampId? by remember { mutableStateOf<LampId?>(null) }
+
+    // 주행 제한이 걸리면 교체 확인 창을 닫음
+    LaunchedEffect(restricted) {
+        if (restricted) replaceTarget = null
+    }
+
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // 차량 연결이 안 되어 있으면 알림 줄
@@ -245,7 +282,7 @@ fun HomeScreen(
 
             // 교체 권장이나 고장이 있으면 배너
             if (problems.isNotEmpty()) {
-                ProblemBanner(problems = problems, onOpenShops = onOpenShops)
+                ProblemBanner(problems = problems, showShopButton = !restricted, onOpenShops = onOpenShops)
             }
 
             Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -262,9 +299,18 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "램프 수명", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                        // 제목, VIN으로 고른 차종 프로필 이름, 램프 교체 안내 (눌러서 교체할 수 있을 때만)
+                        val replaceHint: String = if (showDemo || restricted) "" else " · 램프를 갈았다면 목록에서 눌러 주세요"
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = "램프 수명", style = MaterialTheme.typography.titleLarge)
+                            Text(
+                                text = "차종: ${state.profileName}$replaceHint",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         // 주행 제한 중에는 시연 모드 버튼을 숨김
-                        if (!state.signals.drivingRestricted) {
+                        if (!restricted) {
                             OutlinedButton(onClick = onToggleDemo, modifier = Modifier.height(64.dp)) {
                                 Text(text = if (demo.enabled) "시연 모드 닫기" else "시연 모드")
                             }
@@ -273,11 +319,17 @@ fun HomeScreen(
                     ListHeader()
                     LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         items(state.conditions, key = { it.lamp.toString() }) { condition ->
+                            // 시연 모드면 시연할 램프 고르기, 아니면 교체 확인 (주행 제한 중에는 누를 수 없음)
+                            val onClick: (() -> Unit)? = when {
+                                showDemo -> ({ onSelectDemoLamp(condition.lamp) })
+                                !restricted -> ({ replaceTarget = condition.lamp })
+                                else -> null
+                            }
                             LampRow(
                                 condition = condition,
                                 nowMillis = nowMillis,
                                 selected = showDemo && condition.lamp == demo.selected,
-                                onClick = if (showDemo) ({ onSelectDemoLamp(condition.lamp) }) else null
+                                onClick = onClick
                             )
                         }
                     }
@@ -292,6 +344,19 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        // 램프 교체 확인 창 (주행 제한 중에는 띄우지 않음)
+        val target: LampId? = replaceTarget
+        if (target != null && !restricted) {
+            ReplaceDialog(
+                lamp = target,
+                onConfirm = {
+                    onReplaceLamp(target)
+                    replaceTarget = null
+                },
+                onDismiss = { replaceTarget = null }
+            )
         }
     }
 }

@@ -5,8 +5,8 @@
 // 작성일       : 2026-11-10
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
-// - Virtual Console HTTP API(기기 안 nc, shell 권한)로 램프·방향지시등·브레이크·기어 주입
-// - 주입한 값이 몇 초 안에 signals(litGroups, turnSignal, brakePressed, gear, drivingRestricted)에 들어오는지 확인
+// - Virtual Console HTTP API(기기 안 nc, shell 권한)로 램프·방향지시등·브레이크·기어·차속 주입
+// - 주입한 값이 몇 초 안에 signals(litGroups, turnSignal, brakePressed, gear, drivingRestricted, moving)에 들어오는지 확인
 // - supportedGroups, controllableGroups, VIN 확인 결과를 로그(태그 LampCheckTest)로 남김
 // - 제어할 수 있으면 setLampSwitch(LOW_BEAM, ON) 뒤 점등 상태 확인
 // -----------------------------------------------------------------------------------
@@ -54,7 +54,8 @@ private const val TURN_OFF_HOLD_MILLIS: Long = 1_500L
 
 // 테스트 앱에 줄 런타임 권한
 private val RUNTIME_PERMISSIONS: List<String> = listOf(
-    "pleos.car.permission.FUSED_LOCATION"
+    "pleos.car.permission.FUSED_LOCATION",
+    "android.car.permission.CAR_SPEED"
 )
 
 // 기준 상태: 방향지시등·전조등·상향등 끔, 차속·브레이크 0, 기어 P
@@ -203,6 +204,18 @@ class PleosVehicleGatewayTest {
         // P로 돌아오면 제한 풀림
         inject("/vehicle/gear?gear=Park")
         awaitSignals("P에서 주행 제한 풀림") { !it.drivingRestricted }
+    }
+
+    @Test
+    fun moving_followsSpeed() {
+        // D단 40km/h면 움직이는 중 (P단에서는 차속을 넣어도 주행 상태가 바뀌지 않으므로 D를 먼저 넣음)
+        inject("/vehicle/gear?gear=Drive")
+        inject("/vehicle/controls?speed=40")
+        awaitSignals("40km/h 주행") { it.moving }
+
+        // D단 그대로 0km/h면 멈춤 (신호 대기)
+        inject("/vehicle/controls?speed=0")
+        awaitSignals("신호 대기 정차") { !it.moving }
     }
 
     @Test

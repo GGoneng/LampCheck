@@ -8,6 +8,7 @@
 // - 차량 신호에서 지금 켜져 있는 램프 목록 계산 (점등 그룹, 브레이크등, 후진등, 방향지시등)
 // - 켜져 있는 동안의 시간을 램프별로 누적하고, 주입받은 저장 함수로 저장
 // - 하루 평균 사용 시간 계산 (최대 24시간, 기록이 너무 짧으면 0), 시연용 사용 시간 더하기
+// - 램프 교체: 그 램프의 누적 시간을 지우고 교체 시각부터 다시 셈
 // -----------------------------------------------------------------------------------
 
 package io.github.ggoneng.lampcheck.usage
@@ -64,10 +65,15 @@ const val DAY_MILLIS: Long = 86_400_000L
 
 // 램프별 누적 점등 시간과 처음 기록한 시각
 // firstRecordedAtMillis: 기록을 시작한 시각 (아직 시작 전이면 null)
+// replacedAtMillis: 램프별로 마지막으로 교체한 시각 (교체한 적 없으면 키가 없음)
 data class LampUsage(
     val usedHours: Map<LampId, Double> = emptyMap(),
-    val firstRecordedAtMillis: Long? = null
-)
+    val firstRecordedAtMillis: Long? = null,
+    val replacedAtMillis: Map<LampId, Long> = emptyMap()
+) {
+    // 램프 하나의 기록 시작 시각 (교체했으면 교체 시각, 아니면 처음 기록한 시각)
+    fun startedAtMillis(lamp: LampId): Long? = replacedAtMillis[lamp] ?: firstRecordedAtMillis
+}
 
 // 차량 신호를 구독해 램프별 누적 점등 시간을 세는 계층
 // now: 현재 시각(밀리초), save: 누적 결과 저장 함수 (테스트에서 가상 시간과 가짜 저장을 넣을 수 있게 주입받음)
@@ -139,6 +145,21 @@ class LampUsageTracker(
             current.copy(
                 usedHours = current.usedHours + (lamp to used),
                 firstRecordedAtMillis = current.firstRecordedAtMillis ?: now()
+            )
+        }
+        dirty = true
+        flush()
+    }
+
+    // 램프 교체: 지금까지 켜져 있던 시간을 먼저 더해 둔 뒤 그 램프의 누적 시간을 지우고 교체 시각을 남겨 바로 저장
+    fun replaceLamp(lamp: LampId) {
+        // 교체 전 시간이 새 램프에 들어가지 않게 먼저 정산 (누적 중일 때만)
+        if (job != null) accumulate()
+        val replacedAt: Long = now()
+        _usage.update { current ->
+            current.copy(
+                usedHours = current.usedHours - lamp,
+                replacedAtMillis = current.replacedAtMillis + (lamp to replacedAt)
             )
         }
         dirty = true

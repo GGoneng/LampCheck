@@ -2,6 +2,8 @@
 .gradle/
 .kotlin/
 /tmp/
+/접수양식_*.docx
+/제출자료/
 /local.properties
 /.idea/
 .DS_Store

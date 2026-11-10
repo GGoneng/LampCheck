@@ -5,7 +5,7 @@
 // 작성일       : 2026-11-10
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
-// - 램프별 광원 기본값 표 (LED, 후진등·뒤 방향지시등은 할로겐)
+// - 램프 광원은 차종 프로필(VehicleProfile)에서 받음
 // - 밝기 감쇠 모델 B(t) = 100 × e^(−k·t)의 감쇠율 k를 원점 통과 최소제곱으로 맞춤
 // - 측정값이 부족하면 정격 수명으로 남은 수명 계산
 // - 하루 평균 사용 시간으로 교체 예상 시각 환산, 수명 상태(양호, 교체 준비, 교체 권장, 고장, 데이터 없음) 판정
@@ -19,7 +19,6 @@ package io.github.ggoneng.lampcheck.lifespan
 
 import io.github.ggoneng.lampcheck.model.BrightnessSample
 import io.github.ggoneng.lampcheck.model.LampCondition
-import io.github.ggoneng.lampcheck.model.LampGroup
 import io.github.ggoneng.lampcheck.model.LampId
 import io.github.ggoneng.lampcheck.model.LampStatus
 import io.github.ggoneng.lampcheck.model.LightSource
@@ -29,12 +28,6 @@ import kotlin.math.ln
 // ----------------------------------------------------------
 // Internal Variables (do not call externally)
 // ----------------------------------------------------------
-
-// 램프 그룹별 광원 기본값 (차종별 사양을 받기 전까지 쓰는 예시: 후진등과 뒤 방향지시등은 전구형)
-private val LIGHT_SOURCES: Map<LampGroup, LightSource> = mapOf(
-    LampGroup.REVERSE to LightSource.HALOGEN,
-    LampGroup.REAR_TURN to LightSource.HALOGEN
-)
 
 // 아래 임계값은 실측 근거가 아닌 설계 기본값
 // 감쇠율을 맞추려면 측정값이 몇 시간 범위에 걸쳐 있어야 하는지
@@ -106,9 +99,6 @@ private fun statusOf(
 // External Functions (can be called from outside)
 // ----------------------------------------------------------
 
-// 램프의 광원 종류 (표에 없으면 LED)
-fun lightSourceOf(lamp: LampId): LightSource = LIGHT_SOURCES[lamp.group] ?: LightSource.LED
-
 // 감쇠율 k (1/시간): ln(B/100) = −k·t를 원점 통과 최소제곱으로 맞춤, k = −Σ t·ln(B/100) / Σ t²
 // 측정값이 2개 미만이거나 누적 시간 범위가 1시간 미만이면 null
 // 밝기 0 이하 값은 로그를 쓸 수 없고, 고장 밝기 미만 값은 서서히 어두워진 것이 아니라 고장이므로 맞춤에서 뺌
@@ -128,15 +118,17 @@ fun fitDecayRate(samples: List<BrightnessSample>): Double? {
 
 // 램프 하나의 수명 추정
 // samples: 시간순 밝기 측정값, dailyHours: 하루 평균 사용 시간, shouldBeLit: 지금 켜져 있어야 하는지
+// profile: 램프 광원을 정하는 차종 프로필
 fun estimateLamp(
     lamp: LampId,
     usedHours: Double,
     samples: List<BrightnessSample>,
     dailyHours: Double,
     shouldBeLit: Boolean,
-    nowMillis: Long
+    nowMillis: Long,
+    profile: VehicleProfile
 ): LampCondition {
-    val source: LightSource = lightSourceOf(lamp)
+    val source: LightSource = profile.lightSourceOf(lamp)
     val latestBrightness: Double? = samples.lastOrNull()?.brightnessPercent
 
     // 사용 기록도 측정값도 없으면 추정하지 않음

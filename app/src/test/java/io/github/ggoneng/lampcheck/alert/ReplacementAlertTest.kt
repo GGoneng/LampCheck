@@ -9,6 +9,7 @@
 // - 상태가 좋아졌다가 다시 나빠지면 다시 알리는지 확인
 // - 교체 권장(밝기), 수명 만료, 고장 문장 확인
 // - 꺼져 있어도 최근 밝기가 10% 미만이면 켜지지 않는다는 문장을 쓰는지 확인
+// - 움직이는 동안 교체 권장은 미뤘다가 멈추면 알리고, 켜지지 않는 고장은 바로 알리는지 확인
 // -----------------------------------------------------------------------------------
 
 package io.github.ggoneng.lampcheck.alert
@@ -46,11 +47,12 @@ private val BRAKE_RIGHT: LampId = LampId(LampGroup.BRAKE, LampSide.RIGHT)
 // Internal Classes (do not call externally)
 // ----------------------------------------------------------
 
-// 알림과 가짜 상태 흐름, 말한 문장 기록을 묶은 테스트 환경
+// 알림과 가짜 상태·움직임 흐름, 말한 문장 기록을 묶은 테스트 환경 (기본은 멈춰 있음)
 private class AlertFixture(scope: TestScope) {
     val conditions: MutableStateFlow<List<LampCondition>> = MutableStateFlow(emptyList())
+    val moving: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val spoken: MutableList<String> = mutableListOf()
-    val alert: ReplacementAlert = ReplacementAlert(conditions, { spoken += it }, scope.backgroundScope)
+    val alert: ReplacementAlert = ReplacementAlert(conditions, moving, { spoken += it }, scope.backgroundScope)
 }
 
 // ----------------------------------------------------------
@@ -163,6 +165,65 @@ class ReplacementAlertTest {
             ),
             fixture.spoken
         )
+    }
+
+    @Test
+    fun replaceNow_isDeferredWhileMoving_andSpokenOnceWhenStopped() = runTest {
+        val fixture = AlertFixture(this)
+        fixture.alert.start()
+
+        // 달리는 중에 교체 권장(68%)이 되면 말하지 않음
+        fixture.moving.value = true
+        fixture.conditions.value = listOf(condition(LOW_LEFT, LampStatus.REPLACE_NOW, 68.0))
+        runCurrent()
+        assertEquals(emptyList<String>(), fixture.spoken)
+
+        // 그사이 밝기가 65%로 더 떨어진 뒤 멈추면 그때의 밝기로 한 번 말함
+        fixture.conditions.value = listOf(condition(LOW_LEFT, LampStatus.REPLACE_NOW, 65.0))
+        runCurrent()
+        fixture.moving.value = false
+        runCurrent()
+
+        // 다시 달렸다 멈춰도 반복하지 않음
+        fixture.moving.value = true
+        runCurrent()
+        fixture.moving.value = false
+        runCurrent()
+
+        assertEquals(listOf("왼쪽 하향등 밝기가 처음의 65%예요. 교체를 권해요."), fixture.spoken)
+    }
+
+    @Test
+    fun notLighting_isSpokenImmediatelyWhileMoving() = runTest {
+        val fixture = AlertFixture(this)
+        fixture.alert.start()
+
+        // 달리는 중에도 켜지지 않는 고장은 바로 말함 (같은 때 생긴 교체 권장은 미룸)
+        fixture.moving.value = true
+        fixture.conditions.value = listOf(
+            condition(LOW_LEFT, LampStatus.REPLACE_NOW, 68.0),
+            condition(BRAKE_RIGHT, LampStatus.FAILED, 0.0)
+        )
+        runCurrent()
+
+        assertEquals(listOf("오른쪽 브레이크등이 켜지지 않아요. 바로 점검해 주세요."), fixture.spoken)
+    }
+
+    @Test
+    fun deferredAlert_isDropped_whenLampRecoversBeforeStop() = runTest {
+        val fixture = AlertFixture(this)
+        fixture.alert.start()
+
+        // 달리는 중 교체 권장 → 멈추기 전에 양호(램프 교체) → 멈춤: 말하지 않음
+        fixture.moving.value = true
+        fixture.conditions.value = listOf(condition(LOW_LEFT, LampStatus.REPLACE_NOW, 68.0))
+        runCurrent()
+        fixture.conditions.value = listOf(condition(LOW_LEFT, LampStatus.GOOD, 100.0))
+        runCurrent()
+        fixture.moving.value = false
+        runCurrent()
+
+        assertEquals(emptyList<String>(), fixture.spoken)
     }
 }
 

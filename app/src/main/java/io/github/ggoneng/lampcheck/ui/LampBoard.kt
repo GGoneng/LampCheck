@@ -6,7 +6,7 @@
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
 // - 차체, 앞유리, 지붕, 뒷유리를 Canvas로 그림 (앞쪽이 위)
-// - ALL_LAMPS 전체를 위치마다 수명 상태 색 점으로 표시, 측정값이 있으면 밝기(%)를 옆에 씀
+// - 수명 추정 결과가 있는 램프(차에서 확인한 램프)만 위치마다 수명 상태 색 점으로 표시, 측정값이 있으면 밝기(%)를 옆에 씀
 // - 지금 켜져 있는 램프(점등 그룹, 방향지시등, 브레이크등, 후진등)에 빛 표시
 // - 상태 색 범례
 // -----------------------------------------------------------------------------------
@@ -161,13 +161,13 @@ private fun DrawScope.drawCar(conditions: Map<LampId, LampCondition>, lit: Set<L
         cornerRadius = CornerRadius(carWidth * 0.08f)
     )
 
-    // 램프 점 (켜진 램프는 빛 표시를 먼저 그림)
+    // 램프 점 (수명 추정 결과가 있는 램프만, 켜진 램프는 빛 표시를 먼저 그림)
     val dotRadius = 8.dp.toPx()
     val haloRadius = dotRadius * 2.6f
     for (lamp in ALL_LAMPS) {
+        val condition: LampCondition = conditions[lamp] ?: continue
         val position = LAMP_POSITIONS.getValue(lamp)
         val center = Offset(left + carWidth * position.x, top + carHeight * position.y)
-        val condition: LampCondition? = conditions[lamp]
         if (lamp in lit) {
             drawCircle(
                 brush = Brush.radialGradient(
@@ -179,7 +179,7 @@ private fun DrawScope.drawCar(conditions: Map<LampId, LampCondition>, lit: Set<L
                 center = center
             )
         }
-        drawCircle(color = statusColor(condition?.status ?: LampStatus.NO_DATA), radius = dotRadius, center = center)
+        drawCircle(color = statusColor(condition.status), radius = dotRadius, center = center)
         drawCircle(
             color = Color.Black.copy(alpha = 0.5f),
             radius = dotRadius,
@@ -188,7 +188,7 @@ private fun DrawScope.drawCar(conditions: Map<LampId, LampCondition>, lit: Set<L
         )
 
         // 측정값이 있으면 밝기 글자 (앞쪽 램프는 점 아래, 뒤쪽 램프는 점 위)
-        val brightness: Double = condition?.brightnessPercent ?: continue
+        val brightness: Double = condition.brightnessPercent ?: continue
         val layout: TextLayoutResult = textMeasurer.measure("${brightness.roundToInt()}%", BRIGHTNESS_TEXT_STYLE)
         val gap = dotRadius + 2.dp.toPx()
         val textTop = if (lamp.group.position == LampPosition.FRONT) center.y + gap else center.y - gap - layout.size.height

@@ -14,8 +14,9 @@
     <!-- TextToSpeech SDK: Speech Service 접근 -->
     <uses-permission android:name="pleos.car.permission.TTS_SERVICE" />
 
-    <!-- AAOS Car API: 기어(GEAR_SELECTION) -->
+    <!-- AAOS Car API: 기어(GEAR_SELECTION), 차속(PERF_VEHICLE_SPEED) -->
     <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
+    <uses-permission android:name="android.car.permission.CAR_SPEED" />
 
     <!-- 카카오 로컬 API -->
     <uses-permission android:name="android.permission.INTERNET" />
