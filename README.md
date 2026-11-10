@@ -4,6 +4,8 @@
 
 <img src="docs/screenshots/03_degraded.png" width="800" alt="램프 상태판 화면">
 
+▶ **시연 영상**: [docs/demo/램프체크_시연영상.mp4](docs/demo/램프체크_시연영상.mp4) (2분 25초, Pleos Connect Emulator v2.1 화면 녹화)
+
 <br><br>
 ## 📖 개요
 
@@ -54,7 +56,7 @@ LED 램프는 갑자기 꺼지기보다 서서히 어두워지기 때문에(처�
 │   └── [...]
 ├── app/src/test/                     # 단위·회귀 테스트
 ├── app/src/androidTest/              # 에뮬레이터 기기 테스트
-└── docs/                             # 화면 캡처, 에뮬레이터 신호 주입 방법
+└── docs/                             # 화면 캡처, 시연 영상, 에뮬레이터 신호 주입 방법
 ```
 
 <br><br>
