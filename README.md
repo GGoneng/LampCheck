@@ -4,7 +4,7 @@
 
 <img src="docs/screenshots/03_degraded.png" width="800" alt="램프 상태판 화면">
 
-▶ **시연 영상**: [docs/demo/램프체크_시연영상.mp4](docs/demo/램프체크_시연영상.mp4) (2분 25초, Pleos Connect Emulator v2.1 화면 녹화)
+▶ **시연 영상**: [docs/demo/램프체크_시연영상.mp4](docs/demo/램프체크_시연영상.mp4) (2분 25초, Pleos Connect Emulator v2.1 화면 녹화, 음성 알림 소리 포함)
 
 <br><br>
 ## 📖 개요
