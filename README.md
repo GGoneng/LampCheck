@@ -81,6 +81,14 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 - 2026-11-10 Pleos Connect v2.1 에뮬레이터에서 모두 통과했습니다.
 
 <br><br>
+## 🖥️ 개발에 사용한 에뮬레이터 버전과 화면 규격
+
+| 항목 | 내용 |
+|---|---|
+| 에뮬레이터 버전 | Pleos Connect Emulator v2.1.0 (Android 14, API 34, 시스템 이미지 `pleos_car_emulator` x86_64) |
+| 화면 규격 | 2560x1440 가로 화면, 160dpi |
+
+<br><br>
 ## 🛠️ 기술 스택
 
 | 구분 | 도구 / 프레임워크 |
