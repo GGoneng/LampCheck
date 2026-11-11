@@ -112,7 +112,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 │   └── [...]
 ├── app/src/test/                     # 단위·회귀 테스트
 ├── app/src/androidTest/              # 에뮬레이터 기기 테스트
-└── docs/                             # 화면 캡처, 시연 영상, 에뮬레이터 신호 주입 방법
+└── docs/                             # 화면 캡처, 시연 영상
 ```
 
 <br><br>
