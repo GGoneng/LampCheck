@@ -25,7 +25,7 @@ import kotlin.math.roundToLong
 // Internal Variables (do not call externally)
 // ----------------------------------------------------------
 
-// 남은 수명을 날·달·해 중 무엇으로 쓸지 나누는 기준
+// 남은 수명을 날, 달, 해 중 무엇으로 쓸지 나누는 기준
 private const val DAYS_PER_MONTH: Double = 30.4
 private const val MONTHS_PER_YEAR: Double = 12.0
 private const val SHOW_DAYS_UNDER: Double = 60.0

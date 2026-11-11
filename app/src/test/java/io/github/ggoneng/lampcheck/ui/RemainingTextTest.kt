@@ -54,7 +54,7 @@ class RemainingTextTest {
 
     @Test
     fun shortRecord_showsHoursOnly() {
-        // 처음 기록 2분 뒤, 누적 2분 → 하루 평균 0 → 교체 날짜 없음
+        // 처음 기록 2분 뒤, 누적 2분이면 하루 평균이 0이라 교체 날짜 없음
         val used: Double = 2.0 / 60.0
         val daily: Double = averageDailyHours(used, NOW_MILLIS - 120_000L, NOW_MILLIS)
         val condition: LampCondition = estimateLamp(LOW_LEFT, used, emptyList(), daily, false, NOW_MILLIS, DEFAULT_PROFILE)
@@ -63,7 +63,7 @@ class RemainingTextTest {
 
     @Test
     fun moreThanTenYears_isShownAsTenYearsOrMore() {
-        // 하루 2시간, 남은 10,000시간 → 5,000일(약 13.7년)
+        // 하루 2시간, 남은 10,000시간이면 5,000일(약 13.7년)
         assertEquals("10년 이상 (10,000시간)", remainingText(condition(10_000.0, 5_000.0), NOW_MILLIS))
 
         // 경계 아래: 약 9.6년(3,500일)은 년 단위
@@ -72,7 +72,7 @@ class RemainingTextTest {
 
     @Test
     fun fastForwardedLamp_isShownInMonthsWithDailyCap() {
-        // 첫날 100시간 빨리 감기 → 하루 24시간으로 제한 → 9,900 / 24 = 412.5일 → 약 14개월
+        // 첫날 100시간 빨리 감아도 하루 24시간으로 제한되어 9,900 / 24 = 412.5일, 약 14개월
         val daily: Double = averageDailyHours(100.0, NOW_MILLIS - 60_000L, NOW_MILLIS)
         val condition: LampCondition = estimateLamp(LOW_LEFT, 100.0, emptyList(), daily, false, NOW_MILLIS, DEFAULT_PROFILE)
         assertEquals("약 14개월 (9,900시간)", remainingText(condition, NOW_MILLIS))

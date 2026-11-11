@@ -5,7 +5,7 @@
 // 작성일       : 2026-11-10
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
-// - 교체 권장·고장으로 바뀌는 순간 한 번만 알리는지 확인
+// - 교체 권장이나 고장으로 바뀌는 순간 한 번만 알리는지 확인
 // - 상태가 좋아졌다가 다시 나빠지면 다시 알리는지 확인
 // - 교체 권장(밝기), 수명 만료, 고장 문장 확인
 // - 꺼져 있어도 최근 밝기가 10% 미만이면 켜지지 않는다는 문장을 쓰는지 확인
@@ -47,7 +47,7 @@ private val BRAKE_RIGHT: LampId = LampId(LampGroup.BRAKE, LampSide.RIGHT)
 // Internal Classes (do not call externally)
 // ----------------------------------------------------------
 
-// 알림과 가짜 상태·움직임 흐름, 말한 문장 기록을 묶은 테스트 환경 (기본은 멈춰 있음)
+// 알림과 가짜 상태, 움직임 흐름, 말한 문장 기록을 묶은 테스트 환경 (기본은 멈춰 있음)
 private class AlertFixture(scope: TestScope) {
     val conditions: MutableStateFlow<List<LampCondition>> = MutableStateFlow(emptyList())
     val moving: MutableStateFlow<Boolean> = MutableStateFlow(false)
@@ -67,7 +67,7 @@ class ReplacementAlertTest {
         val fixture = AlertFixture(this)
         fixture.alert.start()
 
-        // 양호 → 교체 권장(68%) → 교체 권장(65%) 순서로 바뀜
+        // 양호, 교체 권장(68%), 교체 권장(65%) 순서로 바뀜
         fixture.conditions.value = listOf(condition(LOW_LEFT, LampStatus.GOOD, 95.0))
         runCurrent()
         fixture.conditions.value = listOf(condition(LOW_LEFT, LampStatus.REPLACE_NOW, 68.0))
@@ -83,7 +83,7 @@ class ReplacementAlertTest {
         val fixture = AlertFixture(this)
         fixture.alert.start()
 
-        // 브레이크를 밟은 동안 고장 → 뗀 뒤 교체 권장 → 다시 밟아 고장
+        // 브레이크를 밟은 동안 고장, 뗀 뒤 교체 권장, 다시 밟아 고장 순서로 바뀜
         fixture.conditions.value = listOf(condition(BRAKE_RIGHT, LampStatus.FAILED, 0.0))
         runCurrent()
         fixture.conditions.value = listOf(condition(BRAKE_RIGHT, LampStatus.REPLACE_NOW, 0.0))
@@ -99,7 +99,7 @@ class ReplacementAlertTest {
         val fixture = AlertFixture(this)
         fixture.alert.start()
 
-        // 교체 권장 → 양호(초기화) → 교체 권장
+        // 교체 권장, 양호(초기화), 교체 권장 순서로 바뀜
         fixture.conditions.value = listOf(condition(LOW_LEFT, LampStatus.REPLACE_NOW, 70.0))
         runCurrent()
         fixture.conditions.value = listOf(condition(LOW_LEFT, LampStatus.GOOD, 100.0))
@@ -214,7 +214,7 @@ class ReplacementAlertTest {
         val fixture = AlertFixture(this)
         fixture.alert.start()
 
-        // 달리는 중 교체 권장 → 멈추기 전에 양호(램프 교체) → 멈춤: 말하지 않음
+        // 달리는 중 교체 권장이 됐다가 멈추기 전에 양호(램프 교체)로 돌아오면 멈춰도 말하지 않음
         fixture.moving.value = true
         fixture.conditions.value = listOf(condition(LOW_LEFT, LampStatus.REPLACE_NOW, 68.0))
         runCurrent()

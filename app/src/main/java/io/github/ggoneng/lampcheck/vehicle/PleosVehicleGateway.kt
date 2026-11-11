@@ -5,9 +5,9 @@
 // 작성일       : 2026-11-09
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
-// - 하향등, 상향등, 미등, 전면·후면 안개등의 capability 확인, 점등 상태 구독, 스위치 위치 조회와 변경
+// - 하향등, 상향등, 미등, 전면과 후면 안개등의 capability 확인, 점등 상태 구독, 스위치 위치 조회와 변경
 // - 방향지시등 상태와 브레이크 페달 구독 (Vehicle SDK)
-// - 기어·차속 구독 (AAOS CarPropertyManager), 주행 제한 구독 (CarUxRestrictionsManager)
+// - 기어와 차속 구독 (AAOS CarPropertyManager), 주행 제한 구독 (CarUxRestrictionsManager)
 // - 차대번호(VIN) 조회
 // -----------------------------------------------------------------------------------
 
@@ -160,7 +160,7 @@ class PleosVehicleGateway(context: Context) : VehicleGateway {
         }
     }
 
-    // 기어·차속 리스너 (AAOS)
+    // 기어와 차속 리스너 (AAOS)
     private val carPropertyCallback: CarPropertyManager.CarPropertyEventCallback =
         object : CarPropertyManager.CarPropertyEventCallback {
             override fun onChangeEvent(value: CarPropertyValue<*>) {
@@ -260,7 +260,7 @@ class PleosVehicleGateway(context: Context) : VehicleGateway {
         return raw?.trim('"')
     }
 
-    // 점등 상태 capability 확인 → 읽을 수 있으면 지원 그룹에 넣고 구독
+    // 점등 상태 capability를 확인하고 읽을 수 있으면 지원 그룹에 넣고 구독
     private fun checkLightState(group: LampGroup) {
         val onComplete: (CapabilityConfig, List<LightState>) -> Unit = { config, _ ->
             // capability 응답이 왔으면 차량 서비스와 연결된 것
@@ -274,7 +274,7 @@ class PleosVehicleGateway(context: Context) : VehicleGateway {
         runSafely("${group.name} 점등 상태 capability 확인") { checkStateCapability(group, onComplete, onFailed) }
     }
 
-    // 스위치 capability 확인 → 쓸 수 있고 권한이 있으면 제어 그룹에 넣고, 읽을 수 있으면 현재 위치 조회
+    // 스위치 capability를 확인해 쓸 수 있고 권한이 있으면 제어 그룹에 넣고, 읽을 수 있으면 현재 위치 조회
     private fun checkLightSwitch(group: LampGroup) {
         val onComplete: (CapabilityConfig, List<LightSwitch>) -> Unit = { config, _ ->
             if (config.accessType in WRITABLE && hasControlPermission()) {
@@ -543,7 +543,7 @@ private suspend fun <T> awaitCallback(
     return result ?: fallback
 }
 
-// AAOS VehicleGear 값 → 앱 기어
+// AAOS VehicleGear 값을 앱 기어로 바꿈
 private fun toGear(value: Int): Gear = when (value) {
     VehicleGear.GEAR_PARK -> Gear.PARK
     VehicleGear.GEAR_REVERSE -> Gear.REVERSE
@@ -552,7 +552,7 @@ private fun toGear(value: Int): Gear = when (value) {
     else -> Gear.UNKNOWN
 }
 
-// SDK 스위치 위치 → 앱 스위치 위치
+// SDK 스위치 위치를 앱 스위치 위치로 바꿈
 private fun toLampSwitch(value: LightSwitch?): LampSwitch = when (value) {
     LightSwitch.OFF -> LampSwitch.OFF
     LightSwitch.ON -> LampSwitch.ON
@@ -561,7 +561,7 @@ private fun toLampSwitch(value: LightSwitch?): LampSwitch = when (value) {
     null -> LampSwitch.UNKNOWN
 }
 
-// 앱 스위치 위치 → SDK 스위치 위치 (알 수 없음은 보낼 수 없음)
+// 앱 스위치 위치를 SDK 스위치 위치로 바꿈 (알 수 없음은 보낼 수 없음)
 private fun toLightSwitch(value: LampSwitch): LightSwitch? = when (value) {
     LampSwitch.OFF -> LightSwitch.OFF
     LampSwitch.ON -> LightSwitch.ON

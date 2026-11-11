@@ -287,7 +287,7 @@ private suspend fun awaitLocation(
     }
 }
 
-// 카카오 로컬 응답 JSON의 documents → 정비소 목록 (응답이 이미 거리순)
+// 카카오 로컬 응답 JSON의 documents를 정비소 목록으로 바꿈 (응답이 이미 거리순)
 private fun parseShops(body: String): List<RepairShop> {
     val documents: JSONArray = JSONObject(body).getJSONArray("documents")
     return (0 until documents.length()).map { index ->

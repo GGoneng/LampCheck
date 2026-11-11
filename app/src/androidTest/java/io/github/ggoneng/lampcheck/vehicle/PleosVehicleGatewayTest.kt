@@ -5,7 +5,7 @@
 // 작성일       : 2026-11-10
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
-// - Virtual Console HTTP API(기기 안 nc, shell 권한)로 램프·방향지시등·브레이크·기어·차속 주입
+// - Virtual Console HTTP API(기기 안 nc, shell 권한)로 램프, 방향지시등, 브레이크, 기어, 차속 주입
 // - 주입한 값이 몇 초 안에 signals(litGroups, turnSignal, brakePressed, gear, drivingRestricted, moving)에 들어오는지 확인
 // - supportedGroups, controllableGroups, VIN 확인 결과를 로그(태그 LampCheckTest)로 남김
 // - 제어할 수 있으면 setLampSwitch(LOW_BEAM, ON) 뒤 점등 상태 확인
@@ -58,7 +58,7 @@ private val RUNTIME_PERMISSIONS: List<String> = listOf(
     "android.car.permission.CAR_SPEED"
 )
 
-// 기준 상태: 방향지시등·전조등·상향등 끔, 차속·브레이크 0, 기어 P
+// 기준 상태: 방향지시등, 전조등, 상향등 끔, 차속과 브레이크 0, 기어 P
 private val BASELINE_PATHS: List<String> = listOf(
     "/vehicle/turn-signal?mode=Off",
     "/vehicle/lights?feature=headlamp_mode&value=Off",
@@ -123,7 +123,7 @@ class PleosVehicleGatewayTest {
         Log.i(TAG, "switches=${gateway.signals.value.switches}")
         Log.i(TAG, "vin=$vin")
 
-        // 에뮬레이터는 하향등·상향등·미등 상태를 주입할 수 있으므로 읽을 수 있어야 함
+        // 에뮬레이터는 하향등, 상향등, 미등 상태를 주입할 수 있으므로 읽을 수 있어야 함
         assertTrue("supportedGroups=$supported", supported.containsAll(listOf(LampGroup.LOW_BEAM, LampGroup.HIGH_BEAM, LampGroup.TAIL)))
         assertFalse("VIN이 비어 있음: $vin", vin.isNullOrBlank())
         assertFalse("VIN에 JSON 따옴표가 남아 있음: $vin", vin.orEmpty().contains('"'))
@@ -184,7 +184,7 @@ class PleosVehicleGatewayTest {
 
     @Test
     fun gear_parkReverseDrive_areReflected() {
-        // R → D → P 순서로 바꿈
+        // R, D, P 순서로 바꿈
         inject("/vehicle/gear?gear=Reverse")
         awaitSignals("기어 R") { it.gear == Gear.REVERSE }
 
@@ -227,7 +227,7 @@ class PleosVehicleGatewayTest {
         Log.i(TAG, "LOW_BEAM 제어 가능=$controllable, controllableGroups=${gateway.controllableGroups.value}")
         assumeTrue("이 차에서는 하향등 스위치를 제어할 수 없음", controllable)
 
-        // 하향등 스위치 ON → 점등 상태와 스위치 위치 확인
+        // 하향등 스위치 ON 뒤 점등 상태와 스위치 위치 확인
         val turnedOn: Boolean = runBlocking { gateway.setLampSwitch(LampGroup.LOW_BEAM, LampSwitch.ON) }
         assertTrue("setLampSwitch(LOW_BEAM, ON) 실패", turnedOn)
         val lit: VehicleSignals = awaitSignals("앱이 켠 하향등") { LampGroup.LOW_BEAM in it.litGroups }
@@ -257,7 +257,7 @@ class PleosVehicleGatewayTest {
     private fun inject(path: String) {
         request("POST", "/browser/session?client=lampcheck-test")
         val response: String = request("PUT", path)
-        assertTrue("주입 실패 $path → ${response.lineSequence().firstOrNull()}", response.startsWith("HTTP/1.1 200") || response.startsWith("HTTP/1.0 200"))
+        assertTrue("주입 실패 $path: ${response.lineSequence().firstOrNull()}", response.startsWith("HTTP/1.1 200") || response.startsWith("HTTP/1.0 200"))
     }
 
     // 기기 안 nc로 HTTP 요청 하나를 보내고 응답 전체를 돌려줌 (shell 권한)

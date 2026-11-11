@@ -8,7 +8,7 @@
 // - 켜진 램프만 측정하고, 꺼진 램프는 마지막 측정값을 유지하는지 확인
 // - 기본 밝기가 정격 수명에서 수명 끝 밝기에 닿는지 확인 (LED, 할로겐)
 // - 시연 조작(열화, 고장, 초기화)이 측정값에 반영되는지 확인
-// - 시연 조작마다 상태가 저장되고, 저장한 상태로 다시 만들면 열화·고장이 그대로인지 확인
+// - 시연 조작마다 상태가 저장되고, 저장한 상태로 다시 만들면 열화와 고장이 그대로인지 확인
 // - 차종 프로필이 바뀌면 그 광원으로 다시 재는지, 램프 교체가 시연 조작과 마지막 측정값을 지우는지 확인
 // -----------------------------------------------------------------------------------
 
@@ -153,7 +153,7 @@ class SimulatedBrightnessSensorTest {
         fixture.signals.value = VehicleSignals(connected = true, brakePressed = true)
         runCurrent()
 
-        // 오른쪽 브레이크등 고장 → 0%, 열화도 함께 걸어 둠
+        // 오른쪽 브레이크등 고장이면 0%, 열화도 함께 걸어 둠
         fixture.sensor.degrade(BRAKE_RIGHT, 10.0)
         fixture.sensor.fail(BRAKE_RIGHT)
         runCurrent()
@@ -208,7 +208,7 @@ class SimulatedBrightnessSensorTest {
         restarted.signals.value = VehicleSignals(connected = true, litGroups = setOf(LampGroup.LOW_BEAM), brakePressed = true)
         runCurrent()
 
-        // 회복되지 않고 열화·고장이 그대로 측정됨
+        // 회복되지 않고 열화와 고장이 그대로 측정됨
         assertEquals(70.0, restarted.reading(LOW_LEFT), EPSILON)
         assertEquals(0.0, restarted.reading(BRAKE_RIGHT), EPSILON)
         assertEquals(100.0, restarted.reading(LOW_RIGHT), EPSILON)

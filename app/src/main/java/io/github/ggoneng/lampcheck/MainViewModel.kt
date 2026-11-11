@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------------
 // 파일명       : MainViewModel.kt
-// 설명         : 화면 상태를 하나의 StateFlow로 모으고 수명 추정·시연 조작·정비소 안내를 연결
+// 설명         : 화면 상태를 하나의 StateFlow로 모으고 수명 추정, 시연 조작, 정비소 안내를 연결
 // 작성자       : 이민하
 // 작성일       : 2026-11-09
 // -----------------------------------------------------------------------------------
@@ -67,7 +67,7 @@ private data class ScreenState(
 enum class Screen { HOME, SHOPS }
 
 // 정비소 화면 상태
-// message: 검색·길 안내 결과 문장 (없으면 null)
+// message: 검색이나 길 안내 결과 문장 (없으면 null)
 data class ShopState(
     val loading: Boolean = false,
     val shops: List<RepairShop> = emptyList(),
@@ -92,7 +92,7 @@ data class MainUiState(
     val canSearchShops: Boolean = false
 )
 
-// 화면과 수명 추정·시연·정비소 계층을 잇는 ViewModel
+// 화면과 수명 추정, 시연, 정비소 계층을 잇는 ViewModel
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     // 구현체, 저장소, 누적기, 센서, 알림
     private val container: AppContainer = AppContainer(application, viewModelScope)
@@ -121,14 +121,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, MainUiState(canSearchShops = container.navigator.canSearchShops))
 
-    // 권한 요청이 끝난 뒤 호출: 구현체 연결과 누적·측정·알림 시작 (화면을 다시 만들어도 한 번만)
+    // 권한 요청이 끝난 뒤 호출: 구현체 연결과 누적, 측정, 알림 시작 (화면을 다시 만들어도 한 번만)
     fun start() {
         if (started) return
         started = true
         container.start()
     }
 
-    // 시연 모드 패널 열기·닫기
+    // 시연 모드 패널 열기와 닫기
     fun toggleDemo() {
         screenState.update { it.copy(demo = it.demo.copy(enabled = !it.demo.enabled)) }
     }

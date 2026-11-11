@@ -75,7 +75,7 @@ import kotlin.math.roundToInt
 // 차 그림의 가로 / 세로 비율
 private const val CAR_ASPECT: Float = 0.46f
 
-// 램프 위치 (차 그림 안의 비율 좌표. x: 왼쪽 0 → 오른쪽 1, y: 앞 0 → 뒤 1)
+// 램프 위치 (차 그림 안의 비율 좌표. x: 왼쪽 0, 오른쪽 1, y: 앞 0, 뒤 1)
 private val LAMP_POSITIONS: Map<LampId, Offset> = mapOf(
     // 앞쪽
     LampId(LampGroup.FRONT_TURN, LampSide.LEFT) to Offset(0.10f, 0.075f),

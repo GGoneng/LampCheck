@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------------
 // 파일명       : AppContainer.kt
-// 설명         : 차량·음성·정비소 구현체와 점등 시간 누적, 밝기 센서, 저장소, 수명 추정, 교체 알림을 만들고 연결
+// 설명         : 차량, 음성, 정비소 구현체와 점등 시간 누적, 밝기 센서, 저장소, 수명 추정, 교체 알림을 만들고 연결
 // 작성자       : 이민하
 // 작성일       : 2026-11-09
 // -----------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ class AppContainer(context: Context, private val scope: CoroutineScope) {
     private val _profile: MutableStateFlow<VehicleProfile> = MutableStateFlow(DEFAULT_PROFILE)
     val profile: StateFlow<VehicleProfile> = _profile.asStateFlow()
 
-    // 시연용 밝기 센서 (저장해 둔 열화·고장 상태에서 이어서 시작)
+    // 시연용 밝기 센서 (저장해 둔 열화와 고장 상태에서 이어서 시작)
     val sensor: SimulatedBrightnessSensor = SimulatedBrightnessSensor(
         vehicle.signals,
         usage.usage.map { it.usedHours },
@@ -181,7 +181,7 @@ class AppContainer(context: Context, private val scope: CoroutineScope) {
         vehicle.release()
     }
 
-    // 램프 교체: 그 램프를 새 램프 기준으로 다시 기록 (누적 시간 → 시연 조작·마지막 측정값 → 저장된 측정값 순서로 지움)
+    // 램프 교체: 그 램프를 새 램프 기준으로 다시 기록 (누적 시간, 시연 조작과 마지막 측정값, 저장된 측정값 순서로 지움)
     // 저장된 측정값을 마지막에 지워, 앞 단계 사이에 옛 상태로 기록된 측정값이 남지 않게 함
     fun replaceLamp(lamp: LampId) {
         usage.replaceLamp(lamp)

@@ -5,7 +5,7 @@
 // 작성일       : 2026-11-10
 // -----------------------------------------------------------------------------------
 // >> 주요 기능
-// - capability로 확인한 Light API 그룹만 보이고, 브레이크등·방향지시등·후진등은 항상 보이는지 확인
+// - capability로 확인한 Light API 그룹만 보이고, 브레이크등, 방향지시등, 후진등은 항상 보이는지 확인
 // - 확인한 그룹이 없으면(차량 연결 전) 전체 램프가 보이는지 확인
 // -----------------------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ class VehicleGatewayTest {
 
     @Test
     fun displayedLamps_hidesUnsupportedLightGroups_only() {
-        // 에뮬레이터처럼 하향등·상향등·미등만 확인됨 → 안개등만 빠짐
+        // 에뮬레이터처럼 하향등, 상향등, 미등만 확인되면 안개등만 빠짐
         val shown: List<LampId> = displayedLamps(setOf(LampGroup.LOW_BEAM, LampGroup.HIGH_BEAM, LampGroup.TAIL))
         val hiddenGroups: Set<LampGroup> = setOf(LampGroup.FRONT_FOG, LampGroup.REAR_FOG)
         assertEquals(ALL_LAMPS.filter { it.group !in hiddenGroups }, shown)

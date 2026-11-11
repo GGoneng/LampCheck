@@ -4,7 +4,7 @@
 
 <img src="docs/screenshots/03_degraded.png" width="800" alt="램프 상태판 화면">
 
-▶ **시연 영상**: [docs/demo/램프체크_시연영상.mp4](docs/demo/램프체크_시연영상.mp4) (2분 25초, Pleos Connect Emulator v2.1 화면 녹화, 음성 알림 소리 포함)
+**시연 영상**: [docs/demo/램프체크_시연영상.mp4](docs/demo/램프체크_시연영상.mp4) (2분 25초, Pleos Connect Emulator v2.1 화면 녹화, 음성 알림 소리 포함)
 
 <br><br>
 ## 🏷️ 앱 이름 및 한 줄 소개
@@ -76,7 +76,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 - Windows에서 프로젝트 경로에 한글이 있으면 Android Gradle 플러그인이 빌드를 거부하므로 영문 경로에서 빌드합니다.
 
 **자동 테스트**
-- `./gradlew testDebugUnitTest`: 단위·회귀 테스트 52개 (수명 추정, 점등 시간 누적, 밝기 시뮬레이터, 교체 알림, 차종 프로필)
+- `./gradlew testDebugUnitTest`: 단위 테스트와 회귀 테스트 52개 (수명 추정, 점등 시간 누적, 밝기 시뮬레이터, 교체 알림, 차종 프로필)
 - `./gradlew connectedDebugAndroidTest`: 에뮬레이터 기기 테스트 9개 (Vehicle SDK 램프, 방향지시등, 브레이크, 기어, 주행 제한 신호 수신)
 - 2026-11-10 Pleos Connect v2.1 에뮬레이터에서 모두 통과했습니다.
 
@@ -110,7 +110,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 │   ├── voice/                        # TTS 음성 안내
 │   ├── ui/                           # 상태판, 정비소 화면
 │   └── [...]
-├── app/src/test/                     # 단위·회귀 테스트
+├── app/src/test/                     # 단위 테스트와 회귀 테스트
 ├── app/src/androidTest/              # 에뮬레이터 기기 테스트
 └── docs/                             # 화면 캡처, 시연 영상
 ```

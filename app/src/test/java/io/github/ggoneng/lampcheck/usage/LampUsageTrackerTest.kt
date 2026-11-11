@@ -257,22 +257,22 @@ class LampUsageTrackerTest {
         // 하루가 안 지났으면 1일로 나눔
         assertEquals(5.0, averageDailyHours(5.0, 0L, DAY_MILLIS / 2), EPSILON)
 
-        // 5일 동안 10시간 → 하루 2시간
+        // 5일 동안 10시간이면 하루 2시간
         assertEquals(2.0, averageDailyHours(10.0, 0L, 5 * DAY_MILLIS), EPSILON)
     }
 
     @Test
     fun averageDailyHours_isCappedAt24Hours() {
-        // 첫날 100시간 빨리 감기 → 하루 100시간이 아니라 24시간
+        // 첫날 100시간 빨리 감아도 하루 100시간이 아니라 24시간
         assertEquals(24.0, averageDailyHours(100.0, 0L, HOUR), EPSILON)
 
-        // 3일 동안 90시간 → 하루 30시간이 아니라 24시간
+        // 3일 동안 90시간이면 하루 30시간이 아니라 24시간
         assertEquals(24.0, averageDailyHours(90.0, 0L, 3 * DAY_MILLIS), EPSILON)
     }
 
     @Test
     fun averageDailyHours_isZeroForTooShortRecord() {
-        // 처음 기록 뒤 하루 안 됨 + 누적 1시간 미만 → 날짜로 환산하지 않음
+        // 처음 기록 뒤 하루가 안 됐고 누적 1시간 미만이면 날짜로 환산하지 않음
         assertEquals(0.0, averageDailyHours(0.9, 0L, DAY_MILLIS - 1), EPSILON)
 
         // 누적 1시간이면 환산 (최소 1일로 나눔)
